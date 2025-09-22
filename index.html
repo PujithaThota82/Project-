@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Top MNC Companies — Dashboard (Single File)</title>
+  <style>
+    :root{--bg:#f4f7fb;--card:#ffffff;--muted:#6b7280;--accent:#2563eb}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial;background:var(--bg);color:#0f1724}
+    .container{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    h1{margin:0;font-size:20px}
+    .controls{display:flex;gap:8px;align-items:center}
+    .card{background:var(--card);padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,36,0.06)}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+    .search{display:flex;gap:8px;margin-bottom:12px}
+    input[type=text], select{padding:8px 10px;border-radius:8px;border:1px solid #e6eef8;width:100%}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #eef2ff}
+    th{cursor:pointer}
+    .muted{color:var(--muted);font-size:13px}
+    .pill{display:inline-block;padding:6px 8px;border-radius:999px;background:#eef2ff;color:var(--accent);font-weight:600;font-size:12px}
+    .actions{display:flex;gap:8px}
+    button{background:var(--accent);color:#fff;border:none;padding:8px 10px;border-radius:8px;cursor:pointer}
+    .small-btn{background:#eef2ff;color:var(--accent);padding:6px 8px}
+    canvas{width:100%;height:260px}
+    footer{margin-top:14px;text-align:center;color:var(--muted);font-size:13px}
+    @media(max-width:960px){.grid{grid-template-columns:1fr}canvas{height:200px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Top MNC Companies — Dashboard</h1>
+        <div class="muted">Interactive single-file dashboard with search, sort, filter, chart and export</div>
+      </div>
+      <div class="controls">
+        <div class="muted">Data sources: Fortune Global 500 & market cap reports</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div class="search">
+          <input id="q" type="text" placeholder="Search by company, country, or industry" />
+          <select id="filter-country"><option value="">All countries</option></select>
+          <select id="filter-industry"><option value="">All industries</option></select>
+          <button id="clear">Clear</button>
+        </div>
+
+        <div style="overflow:auto;max-height:520px">
+          <table id="tbl">
+            <thead>
+              <tr>
+                <th data-key="rank">#</th>
+                <th data-key="name">Company</th>
+                <th data-key="country">Country</th>
+                <th data-key="industry">Industry</th>
+                <th data-key="revenue">Revenue (USD bn)</th>
+                <th data-key="marketCap">Market Cap (USD bn)</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;margin-top:12px;justify-content:space-between">
+          <div class="muted">Showing <span id="count">0</span> companies</div>
+          <div class="actions">
+            <button id="export">Export CSV</button>
+            <button id="reset">Reset Data</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div><strong>Visualize</strong><div class="muted">Market cap vs Revenue</div></div>
+          <div class="pill" id="source-pill">Fortune / MarketCap</div>
+        </div>
+        <canvas id="chart"></canvas>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <select id="chart-metric"><option value="marketCap">Market Cap</option><option value="revenue">Revenue</option></select>
+          <button id="update-chart" class="small-btn">Update</button>
+          <button id="top10" class="small-btn">Top 10</button>
+        </div>
+
+        <hr style="margin:12px 0" />
+        <div>
+          <strong>Notes</strong>
+          <p class="muted">This dashboard uses a curated snapshot of top multinational companies (Fortune Global 500 by revenue & market-cap rankings). Data may change — check primary sources for latest figures.</p>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="muted">Data snapshot references: Fortune Global 500 (2025) and recent market-cap leaderboards.</footer>
+  </div>
+
+  <script>
+    // --- Data snapshot (curated) ---
+    // Revenue (USD billions) - Fortune Global 500 top companies (2024/2025 snapshot)
+    // Market Cap (USD billions) - Market cap snapshot (mid-2025)
+    // Sources cited in chat message accompanying this file.
+
+    const companies = [
+      {rank:1,name:'Walmart',country:'United States',industry:'Retail',revenue:648.1,marketCap:703},
+      {rank:2,name:'Amazon',country:'United States',industry:'Internet Retail',revenue:674.2,marketCap:2016},
+      {rank:3,name:'State Grid',country:'China',industry:'Energy',revenue:545.8,marketCap:null},
+      {rank:4,name:'Saudi Aramco',country:'Saudi Arabia',industry:'Energy',revenue:494.9,marketCap:320},
+      {rank:5,name:'Sinopec Group',country:'China',industry:'Petroleum',revenue:429.7,marketCap:null},
+      {rank:6,name:'China National Petroleum',country:'China',industry:'Petroleum',revenue:421.7,marketCap:null},
+      {rank:7,name:'Apple',country:'United States',industry:'Technology',revenue:383.3,marketCap:3120},
+      {rank:8,name:'UnitedHealth Group',country:'United States',industry:'Healthcare',revenue:371.6,marketCap:479},
+      {rank:9,name:'Berkshire Hathaway',country:'United States',industry:'Financials',revenue:364.5,marketCap:1148},
+      {rank:10,name:'CVS Health',country:'United States',industry:'Healthcare',revenue:357.8,marketCap:85},
+
+      // Market-cap leaders (2025 snapshot)
+      {rank:null,name:'NVIDIA',country:'United States',industry:'Semiconductors',revenue:???,marketCap:4160},
+      {rank:null,name:'Microsoft',country:'United States',industry:'Technology',revenue:unknown,marketCap:3760},
+      {rank:null,name:'Alphabet (Google)',country:'United States',industry:'Technology',revenue:350.0,marketCap:2210},
+      {rank:null,name:'Meta Platforms',country:'United States',industry:'Technology',revenue:???,marketCap:1860},
+      {rank:null,name:'Tesla',country:'United States',industry:'Automotive',revenue:???,marketCap:1020},
+    ];
+
+    // NOTE: Some revenue / market cap fields are intentionally set to null/unknown in this curated snapshot.
+    // This file's primary purpose is the dashboard UI; replace or enrich data array with up-to-date numbers from authoritative APIs or CSVs.
+
+    // --- App logic ---
+    const tblBody = document.querySelector('#tbl tbody');
+    const qEl = document.getElementById('q');
+    const filterCountry = document.getElementById('filter-country');
+    const filterIndustry = document.getElementById('filter-industry');
+    const countEl = document.getElementById('count');
+    const exportBtn = document.getElementById('export');
+    const resetBtn = document.getElementById('reset');
+    const clearBtn = document.getElementById('clear');
+    const chartMetric = document.getElementById('chart-metric');
+    const updateChartBtn = document.getElementById('update-chart');
+    const top10Btn = document.getElementById('top10');
+
+    let state = { list: companies.slice(), sortKey: 'rank', sortDir: 'asc' };
+
+    function unique(arr, key){ return [...new Set(arr.map(x=>x[key]).filter(Boolean))].sort(); }
+
+    function populateFilters(){
+      unique(companies,'country').forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; filterCountry.appendChild(o); });
+      unique(companies,'industry').forEach(i=>{ const o=document.createElement('option'); o.value=i; o.textContent=i; filterIndustry.appendChild(o); });
+    }
+
+    function renderTable(){
+      const q = qEl.value.trim().toLowerCase();
+      const country = filterCountry.value;
+      const industry = filterIndustry.value;
+      let data = companies.filter(c=>{
+        if(country && c.country !== country) return false;
+        if(industry && c.industry !== industry) return false;
+        if(!q) return true;
+        return (c.name && c.name.toLowerCase().includes(q)) || (c.country && c.country.toLowerCase().includes(q)) || (c.industry && c.industry.toLowerCase().includes(q));
+      });
+
+      // sort
+      const key = state.sortKey;
+      data.sort((a,b)=>{
+        const av = a[key] ?? 0; const bv = b[key] ?? 0;
+        if(typeof av === 'string') return state.sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+        return state.sortDir === 'asc' ? (av - bv) : (bv - av);
+      });
+
+      tblBody.innerHTML = '';
+      data.forEach((c,idx)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${c.rank ?? ''}</td><td>${c.name}</td><td>${c.country}</td><td>${c.industry}</td><td>${c.revenue!=null? c.revenue.toLocaleString(undefined,{maximumFractionDigits:1}): '—'}</td><td>${c.marketCap!=null? c.marketCap.toLocaleString(undefined,{maximumFractionDigits:0}): '—'}</td>`;
+        tblBody.appendChild(tr);
+      });
+      countEl.innerText = data.length;
+    }
+
+    // Sorting by clicking headers
+    document.querySelectorAll('th[data-key]').forEach(th=>{
+      th.addEventListener('click', ()=>{
+        const key = th.dataset.key;
+        if(state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+        else { state.sortKey = key; state.sortDir = 'asc'; }
+        renderTable();
+      });
+    });
+
+    // Export CSV
+    exportBtn.addEventListener('click', ()=>{
+      const rows = [['rank','name','country','industry','revenue','marketCap']];
+      companies.forEach(c=> rows.push([c.rank||'',c.name,c.country,c.industry,c.revenue||'',c.marketCap||'']));
+      const csv = rows.map(r=> r.map(v=> '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+      const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='companies.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    resetBtn.addEventListener('click', ()=>{ if(confirm('Reset dashboard data to snapshot?')){ state.list = companies.slice(); renderTable(); renderChart(); } });
+    clearBtn.addEventListener('click', ()=>{ qEl.value=''; filterCountry.value=''; filterIndustry.value=''; renderTable(); });
+
+    qEl.addEventListener('input', renderTable); filterCountry.addEventListener('change', renderTable); filterIndustry.addEventListener('change', renderTable);
+
+    // --- Chart (simple bar chart using Canvas API) ---
+    const canvas = document.getElementById('chart'); const ctx = canvas.getContext('2d');
+
+    function renderChart(limit=companies.length, metric='marketCap'){
+      // clear
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // make data
+      const data = companies.filter(c=> c[metric]!=null).slice().sort((a,b)=> b[metric]-a[metric]).slice(0,limit);
+      const padding = 40; const barGap = 8;
+      const w = canvas.width = canvas.clientWidth; const h = canvas.height = 260;
+      const max = data[0] ? data[0][metric] : 1;
+      const barWidth = (w - padding*2 - (data.length-1)*barGap) / data.length;
+      ctx.font = '12px Inter, Arial'; ctx.fillStyle = '#374151'; ctx.textAlign = 'center';
+
+      data.forEach((d,i)=>{
+        const x = padding + i*(barWidth+barGap);
+        const barH = (d[metric]/max) * (h - padding*2);
+        const y = h - padding - barH;
+        // bar
+        ctx.fillStyle = '#60a5fa';
+        roundRect(ctx, x, y, barWidth, barH, 6, true, false);
+        // label
+        ctx.fillStyle = '#0f1724'; ctx.fillText(d.name, x + barWidth/2, h - padding + 14);
+        // value
+        ctx.fillStyle = '#0f1724'; ctx.fillText((d[metric]).toLocaleString(undefined,{maximumFractionDigits:0}), x + barWidth/2, y - 8);
+      });
+    }
+
+    function roundRect(ctx, x, y, w, h, r, fill, stroke){ if(typeof r==='undefined') r=5; ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); if(fill) ctx.fill(); if(stroke) ctx.stroke(); }
+
+    updateChartBtn.addEventListener('click', ()=> renderChart(10, chartMetric.value));
+    top10Btn.addEventListener('click', ()=> renderChart(10, chartMetric.value));
+
+    // --- Init ---
+    populateFilters(); renderTable(); renderChart(10,'marketCap');
+
+    // Resize handling for canvas
+    window.addEventListener('resize', ()=> renderChart(10, chartMetric.value));
+  </script>
+</body>
+</html>
